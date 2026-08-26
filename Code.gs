@@ -2,7 +2,7 @@ const SHEET_NAME = "Sheet1";
 const CONFIG_SHEET_NAME = "Config";
 const HEADER_ROW = 1;
 const ADMIN_EMAILS = ['filmast@gmail.com', 'anna.raimondi@hotmail.it'];
-const DASHBOARD_URL = 'https://filmast-babysitter.netlify.app/';
+const DASHBOARD_URL = 'https://filmast.github.io/babysitter-tracker/';
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 
