@@ -701,6 +701,13 @@
     const DRAFT_ID = 'babysitter_drafts_final';
     const ADMIN_PIN = '15300608';
     const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwsSPXWyetdIHzE6b6i6zlheVxgQgeh5sydgH3_LuMEeRb4eR8_HFw6mZXwiYT23-Of/exec';
+
+    // Credenziali admin locali (non richiedono Apps Script)
+    // La babysitter viene verificata via Apps Script
+    const ADMIN_USERS = {
+      'filmast@gmail.com':        { password: '15300608', name: 'Filippo' },
+      'anna.raimondi@hotmail.it': { password: '15300608', name: 'Anna' }
+    };
     
     let data = { records: [] };
     let drafts = { ore: [], assenze: [] };
@@ -880,23 +887,39 @@
         return;
       }
 
+      errEl.style.display = 'none';
       btn.textContent = 'Accesso in corso...';
       btn.disabled = true;
-      errEl.style.display = 'none';
 
       try {
-        const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=checkPassword&email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password));
+        // ── Admin: verifica locale (non richiede Apps Script) ──────────────
+        const adminUser = ADMIN_USERS[email];
+        if (adminUser) {
+          if (adminUser.password === password) {
+            setRole('admin', email, adminUser.name, remember);
+          } else {
+            errEl.textContent = 'Password non corretta';
+            errEl.style.display = 'block';
+          }
+          return;
+        }
+
+        // ── Babysitter: verifica via Apps Script ───────────────────────────
+        const response = await fetch(
+          GOOGLE_APPS_SCRIPT_URL +
+          '?action=checkPassword' +
+          '&email=' + encodeURIComponent(email) +
+          '&password=' + encodeURIComponent(password)
+        );
         const result = await response.json();
 
-        if (result.status === 'ok') {
-          const role = result.role; // 'admin' o 'babysitter'
-          const displayName = result.displayName || email.split('@')[0];
-          setRole(role, email, displayName, remember);
+        if (result.status === 'ok' && result.role === 'babysitter') {
+          setRole('babysitter', email, result.displayName || 'Babysitter', remember);
         } else {
           errEl.textContent = result.message || 'Email o password non corretti';
           errEl.style.display = 'block';
-          document.getElementById('login-password').value = '';
         }
+
       } catch (error) {
         errEl.textContent = 'Errore di connessione. Riprova.';
         errEl.style.display = 'block';
@@ -907,43 +930,31 @@
     }
 
     async function changePassword() {
-      // Funziona sia per admin che babysitter
       const isAdmin = currentRole === 'admin';
       const currentPw = document.getElementById(isAdmin ? 'admin-pw-current' : 'pw-current').value;
       const newPw = document.getElementById(isAdmin ? 'admin-pw-new' : 'pw-new').value;
       const confirmPw = document.getElementById(isAdmin ? 'admin-pw-confirm' : 'pw-confirm').value;
 
-      if (!currentPw || !newPw || !confirmPw) {
-        showToast('Compila tutti i campi password', 'error');
-        return;
-      }
-      if (newPw !== confirmPw) {
-        showToast('Le nuove password non coincidono', 'error');
-        return;
-      }
-      if (newPw.length < 6) {
-        showToast('La password deve essere di almeno 6 caratteri', 'error');
+      if (!currentPw || !newPw || !confirmPw) { showToast('Compila tutti i campi', 'error'); return; }
+      if (newPw !== confirmPw) { showToast('Le nuove password non coincidono', 'error'); return; }
+      if (newPw.length < 6) { showToast('Password di almeno 6 caratteri', 'error'); return; }
+
+      if (isAdmin) {
+        // Admin: cambia password via Apps Script (aggiorna Config sheet)
+        showToast('Per cambiare la password admin aggiorna direttamente il foglio Config nel Google Sheet.', 'info');
         return;
       }
 
+      // Babysitter: via Apps Script
       try {
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
-          body: JSON.stringify({
-            action: 'changePassword',
-            email: currentEmail,
-            currentPassword: currentPw,
-            newPassword: newPw
-          })
+          body: JSON.stringify({ action: 'changePassword', email: currentEmail, currentPassword: currentPw, newPassword: newPw })
         });
         const result = await response.json();
         if (result.status === 'ok') {
-          showToast('Password aggiornata con successo!', 'success');
-          // Pulisci i campi
-          ['pw-current','pw-new','pw-confirm','admin-pw-current','admin-pw-new','admin-pw-confirm'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = '';
-          });
+          showToast('Password aggiornata!', 'success');
+          ['pw-current','pw-new','pw-confirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         } else {
           showToast(result.message || 'Password attuale non corretta', 'error');
         }
