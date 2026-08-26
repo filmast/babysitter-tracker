@@ -68,23 +68,23 @@ function handleCheckPassword(email, password) {
 
     var configSheet = SpreadsheetApp.openById(getSheetId()).getSheetByName(CONFIG_SHEET_NAME);
     if (!configSheet) {
-      return jsonResult({ status: 'error', message: 'Foglio Config non trovato. Contatta l\'amministratore.' });
+      return jsonResult({ status: 'error', message: 'Foglio Config non trovato' });
     }
 
     var data = configSheet.getDataRange().getValues();
-    // Riga 1 = intestazioni (Email | Password | Ruolo | Nome)
-    // Righe 2+ = utenti
+    Logger.log('DEBUG: Rows found: ' + data.length);
+    
     for (var i = 1; i < data.length; i++) {
       var rowEmail = (data[i][0] || '').toString().trim().toLowerCase();
       var rowPassword = (data[i][1] || '').toString().trim();
-      var rowRole = (data[i][2] || '').toString().trim().toLowerCase();
-      var rowName = (data[i][3] || '').toString().trim();
-
+      
+      Logger.log('Row ' + i + ' - Email: [' + rowEmail + '] Password: [' + rowPassword + ']');
+      
       if (rowEmail === email.trim().toLowerCase() && rowPassword === password) {
         return jsonResult({
           status: 'ok',
-          role: rowRole === 'admin' ? 'admin' : 'babysitter',
-          displayName: rowName || email.split('@')[0]
+          role: (data[i][2] || '').toString().trim().toLowerCase() === 'admin' ? 'admin' : 'babysitter',
+          displayName: (data[i][3] || '').toString().trim()
         });
       }
     }
