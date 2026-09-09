@@ -506,7 +506,7 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>Data</label>
-                <input type="date" id="ore-date" min="2026-09-08" onchange="updateContractHours()">
+                <input type="date" id="ore-date" onchange="updateContractHours()">
               </div>
               <div class="form-group">
                 <label><span id="day-label">Giorno</span> (ore contrattuali)</label>
@@ -539,7 +539,7 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>Data</label>
-                <input type="date" id="assenza-date" min="2026-09-08">
+                <input type="date" id="assenza-date">
               </div>
               <div class="form-group">
                 <label>Tipo</label>
@@ -1146,25 +1146,9 @@
     }
 
     function calculateExtraHoursWithCompensation(dateStr, hoursInput, contractHours) {
-      // Calcola totali del mese fino ad oggi
-      const [year, month, day] = dateStr.split('-');
-      const monthKey = `${year}-${month}`;
-      
-      // Registrazioni approvate nel mese
-      const approvedThisMonth = data.records.filter(r => 
-        r.date.startsWith(monthKey) && r.status === 'approved' && r.type === 'ore' && r.date <= dateStr
-      );
-      
-      const totalHoursMonth = approvedThisMonth.reduce((sum, r) => sum + (r.hours || 0), 0) + hoursInput;
-      const totalContractMonth = approvedThisMonth.reduce((sum, r) => sum + (r.contractHours || 0), 0) + contractHours;
-      
-      // Se il totale del mese è inferiore al contrattuale, non c'è extra
-      if (totalHoursMonth <= totalContractMonth) {
-        return 0;
-      }
-      
-      // Altrimenti, solo le ore davvero in eccesso
-      return Math.max(0, totalHoursMonth - totalContractMonth);
+      // Ore extra per il GIORNO specifico: ore effettive - ore contrattuali
+      // Non cumulativo per il mese, ma solo per questo giorno
+      return Math.max(0, hoursInput - contractHours);
     }
 
     function addOreToDraft() {
