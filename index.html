@@ -1524,7 +1524,7 @@
       // Registrazioni del mese (esclusi deleted), indicizzate per data
       const recordsByDate = {};
       data.records
-        .filter(r => r.status !== 'deleted' && r.date.substring(0, 7) === selectedMonth)
+        .filter(r => r.status === 'approved' && r.date.substring(0, 7) === selectedMonth)
         .sort((a, b) => a.date.localeCompare(b.date))
         .forEach(r => {
           const d = r.date;
