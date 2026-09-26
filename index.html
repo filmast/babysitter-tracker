@@ -735,6 +735,19 @@
       return d.substring(0, 10);
     }
 
+    function formatTimeCell(v) {
+      if (!v) return '';
+      const str = String(v).trim();
+      if (/^\d{1,2}:\d{2}$/.test(str)) return str.padStart(5, '0');
+      const d = new Date(str);
+      if (!isNaN(d)) return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' });
+      return str;
+    }
+
+    function timeRange(r) {
+      return (r.startTime && r.endTime) ? `🕐 ${r.startTime} → ${r.endTime}` : '';
+    }
+
     async function loadDataFromSheets() {
       try {
         setSyncStatus('syncing', 'Sincronizzazione...');
@@ -755,7 +768,9 @@
               status: row[7] || 'pending_approval',
               submittedAt: row[8],
               rejectionReason: row[9] || '',
-              babysitterEmail: row[10] || ''
+              babysitterEmail: row[10] || '',
+              startTime: formatTimeCell(row[11]),
+              endTime: formatTimeCell(row[12])
             };
           });
 
@@ -1211,6 +1226,8 @@
 
       const ore = {
         date: dateStr,
+        startTime: document.getElementById('ore-start').value,
+        endTime: document.getElementById('ore-end').value,
         dayOfWeek: dayNames[dayIndex],
         hours: Math.round(hoursInput * 2) / 2,
         contractHours: contractHours,
@@ -1271,7 +1288,7 @@
         document.getElementById('draft-ore-list').innerHTML = drafts.ore.map((o, i) => `
           <div class="draft-box">
             <h4>${o.date} (${o.dayOfWeek})</h4>
-            <p><strong>${o.hours} ore</strong> ${o.extraHours > 0 ? '(+' + o.extraHours + ' extra)' : ''}</p>
+            <p><strong>${o.hours} ore</strong> ${o.extraHours > 0 ? '(+' + o.extraHours + ' extra)' : ''} ${o.startTime && o.endTime ? '· ' + o.startTime + '–' + o.endTime : ''}</p>
             ${o.notes ? `<p style="font-size: 11px; color: #52514e;">Note: ${o.notes}</p>` : ''}
             <div class="button-group" style="margin-top: 8px;">
               <button class="btn btn-secondary" onclick="deleteOreDraft(${i})" style="font-size: 12px;">Elimina</button>
@@ -1360,7 +1377,10 @@
                 notes: ore.notes,
                 status: 'pending_approval',
                 submittedAt: new Date().toLocaleDateString('it-IT'),
-                rejectionReason: ''
+                rejectionReason: '',
+                babysitterEmail: currentEmail || '',
+                startTime: ore.startTime || '',
+                endTime: ore.endTime || ''
               }
             })
           });
@@ -1377,6 +1397,8 @@
           hours: o.hours,
           extraHours: o.extraHours,
           notes: o.notes,
+          startTime: o.startTime || '',
+          endTime: o.endTime || '',
           status: 'pending_approval',
           submittedAt: new Date().toLocaleDateString('it-IT'),
           rejectionReason: ''
@@ -1419,7 +1441,8 @@
                 notes: assenza.reason,
                 status: 'pending_approval',
                 submittedAt: new Date().toLocaleDateString('it-IT'),
-                rejectionReason: ''
+                rejectionReason: '',
+                babysitterEmail: currentEmail || ''
               }
             })
           });
@@ -1551,8 +1574,9 @@
         const dayNameIt = dayNamesIt[dayIdx];
         const contractH = contractByDay[dayKey];
 
-        // Solo giorni lavorativi (lun-ven)
+        // Solo giorni lavorativi (lun-ven) e dall'inizio del contratto
         if (contractH === 0) continue;
+        if (dateStr < '2026-09-08') continue;
 
         const recs = recordsByDate[dateStr] || [];
         const isFuture = dateStr > today;
@@ -1567,6 +1591,8 @@
               <td style="padding:6px 8px;">${dateStr}</td>
               <td style="padding:6px 8px;">${dayNameIt}</td>
               <td style="padding:6px 8px; color:#b45309;">— Mancante</td>
+              <td style="padding:6px 8px; text-align:center;">—</td>
+              <td style="padding:6px 8px; text-align:center;">—</td>
               <td style="padding:6px 8px; text-align:center;">${contractH}</td>
               <td style="padding:6px 8px; text-align:center;">—</td>
               <td style="padding:6px 8px; text-align:center;">—</td>
@@ -1599,6 +1625,8 @@
                 <td style="padding:6px 8px;">${r.date}</td>
                 <td style="padding:6px 8px;">${r.dayOfWeek || dayNameIt}</td>
                 <td style="padding:6px 8px;">${tipo}</td>
+                <td style="padding:6px 8px; text-align:center; white-space:nowrap;">${r.type === 'ore' && r.startTime ? r.startTime : '—'}</td>
+                <td style="padding:6px 8px; text-align:center; white-space:nowrap;">${r.type === 'ore' && r.endTime ? r.endTime : '—'}</td>
                 <td style="padding:6px 8px; text-align:center;">${r.type === 'ore' ? oreCont : '—'}</td>
                 <td style="padding:6px 8px; text-align:center;">${oreEff.toFixed(1)}</td>
                 <td style="padding:6px 8px; text-align:center;">${extra}</td>
@@ -1614,12 +1642,14 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th colspan="8" style="background:var(--brand-light); color:var(--brand); padding:12px; border-radius:8px 8px 0 0;">${meseLabel}</th>
+              <th colspan="10" style="background:var(--brand-light); color:var(--brand); padding:12px; border-radius:8px 8px 0 0;">${meseLabel}</th>
             </tr>
             <tr>
               <th>Data</th>
               <th>Giorno</th>
               <th>Tipo</th>
+              <th style="text-align:center;">Ingresso</th>
+              <th style="text-align:center;">Uscita</th>
               <th style="text-align:center;">Ore cont.</th>
               <th style="text-align:center;">Ore eff.</th>
               <th style="text-align:center;">Ore extra</th>
@@ -1630,7 +1660,7 @@
           <tbody>${rows}</tbody>
           <tfoot>
             <tr>
-              <td colspan="3">Totale mese</td>
+              <td colspan="5">Totale mese</td>
               <td style="text-align:center;">${oreContTot.toFixed(1)}</td>
               <td style="text-align:center;">${oreEffTot.toFixed(1)}</td>
               <td style="text-align:center; color:${extraTot >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:700;">${extraTot > 0 ? '+' : ''}${Math.round(extraTot*10)/10}</td>
@@ -1687,7 +1717,8 @@
         pendingHtml.innerHTML = pending.map((r, i) => `
           <div class="pending-entry">
             <strong>${r.date} (${r.dayOfWeek})</strong><br/>
-            <span style="font-size: 12px;">${r.type === 'ore' ? r.hours + ' ore' : r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro'}</span>
+            <span style="font-size: 12px;">${r.type === 'ore' ? r.hours + ' ore (contratto ' + r.contractHours + ')' : r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro'}</span>
+            ${r.type === 'ore' && timeRange(r) ? `<div style="font-size: 13px; margin-top: 4px; font-weight: 600; color: var(--brand);">${timeRange(r)}</div>` : ''}
             ${r.notes ? `<div style="font-size: 11px; margin-top: 4px; color: #52514e;">📝 ${r.notes}</div>` : ''}
             <div class="button-group" style="margin-top: 8px;">
               <button class="btn btn-success" onclick="approvePending(${data.records.indexOf(r)})" style="font-size: 12px;">✓ Approva</button>
@@ -1703,7 +1734,7 @@
       } else {
         historyHtml.innerHTML = approved.slice().reverse().map(r => `
           <div style="padding: 8px 0; border-bottom: 1px solid #e1e0d9;">
-            <strong>${r.date} (${r.dayOfWeek})</strong> ${r.type === 'ore' ? '— ' + r.hours + ' ore' : '— ' + (r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro')}<br/>
+            <strong>${r.date} (${r.dayOfWeek})</strong> ${r.type === 'ore' ? '— ' + r.hours + ' ore' + (timeRange(r) ? ' · ' + timeRange(r) : '') : '— ' + (r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro')}<br/>
             <span style="font-size: 11px; color: #52514e;">${r.submittedAt}</span>
           </div>
         `).join('');
@@ -2208,7 +2239,7 @@
             action: 'updateStatus',
             rowIndex: idx,
             status: 'approved',
-            babysitterEmail: profile.email || '',
+            babysitterEmail: record.babysitterEmail || '',
             babysitterDate: record.date
           })
         });
@@ -2252,7 +2283,7 @@
             rowIndex: idx,
             status: 'rejected',
             rejectionReason: reason,
-            babysitterEmail: profile.email || '',
+            babysitterEmail: record.babysitterEmail || '',
             babysitterDate: record.date
           })
         });
