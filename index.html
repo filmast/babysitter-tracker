@@ -214,6 +214,19 @@
     .stat-card.accent p:first-child { opacity: 0.85; }
 
     /* ── Progress Bar ── */
+    .ec-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; border: 1px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
+    .ec-table th { background: var(--brand-light); color: var(--brand-dark); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; padding: 10px 8px; text-align: center; vertical-align: middle; line-height: 1.3; }
+    .ec-table td { padding: 10px 8px; text-align: center; vertical-align: middle; border-top: 1px solid var(--gray-100); font-variant-numeric: tabular-nums; }
+    .ec-table th + th, .ec-table td + td { border-left: 1px solid var(--gray-200); }
+    .ec-table tbody tr:nth-child(even) td { background: var(--gray-50); }
+    .ec-table tr.ec-month td { background: var(--gray-100) !important; text-align: left; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--gray-500); padding: 6px 10px; border-left: 0; }
+    .ec-table .ec-main { font-weight: 600; color: var(--gray-900); }
+    .ec-table .ec-sub { display: block; font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+    .ec-table .ec-strong { font-weight: 700; }
+    .ec-table .ec-neg { color: var(--red); }
+    .ec-table td { white-space: nowrap; }
+    .ec-table .ec-dates { font-size: 12px; min-width: 150px; white-space: normal; }
+    .kpi-sub { font-size: 12px; color: var(--gray-500); margin-top: 4px; }
     .progress-bar { background: var(--gray-200); border-radius: 99px; height: 6px; margin-top: 8px; overflow: hidden; }
     .progress-fill { background: linear-gradient(90deg, var(--brand), #8B5CF6); height: 100%; border-radius: 99px; transition: width 0.6s ease; }
 
@@ -384,6 +397,18 @@
   </div>
 
   <!-- Toast notification -->
+  <div id="sending-overlay" class="modal hidden" style="z-index:3000;">
+    <div class="modal-content" style="text-align:center; max-width:360px;">
+      <div id="sending-icon" class="hourglass" style="font-size:52px; line-height:1; margin:8px 0 14px;">⏳</div>
+      <h2 id="sending-title">Invio in corso…</h2>
+      <p id="sending-msg" style="margin-bottom:1rem;">Attendi qualche secondo: non chiudere l'app e non premere di nuovo.</p>
+      <button id="sending-ok" class="btn btn-primary" style="width:100%; display:none;" onclick="hideSending()">OK</button>
+    </div>
+  </div>
+  <style>
+    .hourglass { display:inline-block; animation: hg-spin 1.6s ease-in-out infinite; }
+    @keyframes hg-spin { 0%,40% { transform: rotate(0); } 50%,90% { transform: rotate(180deg); } 100% { transform: rotate(360deg); } }
+  </style>
   <div id="toast-container" style="position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px;"></div>
 
     <div class="header">
@@ -393,7 +418,7 @@
 
     <div class="tabs" id="main-tabs">
       <button class="tab-btn active" data-tab="babysitter" onclick="switchMainTab('babysitter')">Babysitter</button>
-      <button class="tab-btn" data-tab="filippo" id="filippo-tab" style="display: none;" onclick="switchMainTab('filippo')">Filippo - Dashboard</button>
+      <button class="tab-btn" data-tab="filippo" id="filippo-tab" style="display: none;" onclick="switchMainTab('filippo')">Dashboard</button>
     </div>
 
     <!-- BABYSITTER SEZIONE -->
@@ -606,29 +631,59 @@
 
       <!-- RIEPILOGO MENSILE -->
     <div id="filippo-section" class="section">
-      <div class="stats">
-        <div class="stat-card">
-          <p>Progress mese</p>
-          <p id="progress-ore">0%</p>
-          <div class="progress-bar">
-            <div class="progress-fill" id="progress-bar" style="width: 0%;"></div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <p>Ore mese (sett-ago)</p>
-          <p id="ore-mese">0</p>
-        </div>
-        <div class="stat-card">
-          <p>Ore anno (sett-ago)</p>
-          <p id="ore-anno">0</p>
-        </div>
-      </div>
-
       <div class="card">
         <h3>In attesa di approvazione</h3>
         <div id="filippo-pending">
           <p class="muted">Caricamento dati...</p>
         </div>
+      </div>
+
+      <div class="stats" id="kpi-extra">
+        <div class="stat-card">
+          <p>Ore extra maturate</p>
+          <p id="kpi-maturate" style="font-size:28px; font-weight:700; color:var(--gray-900);">0 h</p>
+          <div id="kpi-maturate-sub" class="kpi-sub"></div>
+        </div>
+        <div class="stat-card">
+          <p>Compensate con ferie</p>
+          <p id="kpi-compensate" style="font-size:28px; font-weight:700; color:var(--gray-900);">0 h</p>
+          <div id="kpi-compensate-sub" class="kpi-sub"></div>
+        </div>
+        <div class="stat-card" id="kpi-saldo-card" style="border:2px solid var(--brand);">
+          <p>Saldo ore extra</p>
+          <p id="kpi-saldo" style="font-size:28px; font-weight:700; color:var(--gray-900);">0 h</p>
+          <div id="kpi-saldo-sub" class="kpi-sub"></div>
+        </div>
+        <div class="stat-card">
+          <p>Ferie residue totali</p>
+          <p id="kpi-residuo" style="font-size:28px; font-weight:700; color:var(--gray-900);">26 gg</p>
+          <div id="kpi-residuo-sub" class="kpi-sub"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+          <h3 style="margin:0;">Estratto conto ore extra e ferie</h3>
+          <div style="display:flex; gap:8px;">
+            <button onclick="setEcView('month')" id="btn-ec-month" class="btn-toggle active">Mensile</button>
+            <button onclick="setEcView('week')" id="btn-ec-week" class="btn-toggle">Settimanale</button>
+            <button onclick="setEcView('day')" id="btn-ec-day" class="btn-toggle">Giornaliera</button>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--gray-500); margin:-6px 0 12px;">Ore extra = effettive − contrattuali (i giorni in difetto compensano). 1 giorno di ferie = 2,8 h. Le ferie usano prima il saldo extra, poi le 26 contrattuali.</p>
+        <div class="table-wrap" id="estratto-conto"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+          <h3 style="margin:0;">Come si muove il saldo ferie</h3>
+          <div style="display:flex; gap:8px;">
+            <button onclick="setSaldoView('month')" id="btn-saldo-month" class="btn-toggle active">Mensile</button>
+            <button onclick="setSaldoView('week')" id="btn-saldo-week" class="btn-toggle">Settimanale</button>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--gray-500); margin:-6px 0 12px;"><span id="saldo-chart-note">Si parte dalle 26 ferie contrattuali: le ore extra aggiungono giorni, le ferie godute (e le ore in difetto) ne tolgono.</span></p>
+        <canvas id="saldoChart" style="max-height: 320px;"></canvas>
       </div>
 
       <div class="card">
@@ -663,58 +718,38 @@
         <button class="btn btn-primary" onclick="changePassword()" style="width:100%;">Aggiorna Password</button>
       </div>
 
-      <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h3>Ore per mese (contrattuali vs effettive)</h3>
-          <div style="display: flex; gap: 8px;">
-            <button onclick="switchChartView('hours', 'monthly')" id="btn-hours-monthly" class="btn-toggle active">Mensile</button>
-            <button onclick="switchChartView('hours', 'weekly')" id="btn-hours-weekly" class="btn-toggle">Settimanale</button>
-          </div>
-        </div>
-        <canvas id="monthlyHoursChart" style="max-height: 300px;"></canvas>
-      </div>
-
-      <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h3>Ferie extra maturate per mese</h3>
-          <div style="display: flex; gap: 8px;">
-            <button onclick="switchChartView('ferie', 'monthly')" id="btn-ferie-monthly" class="btn-toggle active">Mensile</button>
-            <button onclick="switchChartView('ferie', 'weekly')" id="btn-ferie-weekly" class="btn-toggle">Settimanale</button>
-          </div>
-        </div>
-        <canvas id="extraFerieChart" style="max-height: 300px;"></canvas>
-      </div>
-
-      <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h3>Variazioni ferie per mese (incrementi e decrementi)</h3>
-          <div style="display: flex; gap: 8px;">
-            <button onclick="switchChartView('stock', 'monthly')" id="btn-stock-monthly" class="btn-toggle active">Mensile</button>
-            <button onclick="switchChartView('stock', 'weekly')" id="btn-stock-weekly" class="btn-toggle">Settimanale</button>
-          </div>
-        </div>
-        <canvas id="ferieStockChart" style="max-height: 300px;"></canvas>
-      </div>
     </div>
   </div>
 
   <script>
     const SHEET_ID = 'babysitter_data_sheets_final';
     const DRAFT_ID = 'babysitter_drafts_final';
-    const ADMIN_PIN = '15300608';
     const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7xJodpQ2qX54umhZ4Vx8Arj0SLblkIr1uh4saysemx3d9mLoU-Ye5sL7RGJxI5gGb/exec';
 
-    // Credenziali admin locali (non richiedono Apps Script)
-    // La babysitter viene verificata via Apps Script
-    const ADMIN_USERS = {
-      'filmast@gmail.com':        { password: '15300608', name: 'Filippo' },
-      'anna.raimondi@hotmail.it': { password: '15300608', name: 'Anna' }
-    };
+    // Nessuna credenziale nel codice: tutti i login sono verificati dal backend,
+    // che rilascia un token di sessione richiesto per leggere e scrivere i dati.
+    let authToken = null;
+
+    async function apiOk(response) {
+      let res = {};
+      try { res = await response.json(); } catch (e) { setSyncStatus('error', '✗ Risposta non valida'); return false; }
+      if (res.status === 'ok') return true;
+      if (res.code === 'auth') { sessionExpired(); return false; }
+      setSyncStatus('error', '✗ ' + (res.message || 'Errore'));
+      return false;
+    }
+
+    function sessionExpired() {
+      logout(false);
+      const errEl = document.getElementById('login-error');
+      if (errEl) { errEl.textContent = 'Sessione scaduta: accedi di nuovo.'; errEl.style.display = 'block'; }
+    }
     
     let data = { records: [] };
     let drafts = { ore: [], assenze: [] };
     let currentRole = null;
     let currentEmail = null;
+    let currentName = '';
     let rejectionModalData = null;
     
     let chartViews = {
@@ -753,8 +788,10 @@
     async function loadDataFromSheets() {
       try {
         setSyncStatus('syncing', 'Sincronizzazione...');
-        const response = await fetch(GOOGLE_APPS_SCRIPT_URL);
+        if (!authToken) return;
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?token=' + encodeURIComponent(authToken));
         const json = await response.json();
+        if (json.code === 'auth') { sessionExpired(); return; }
         
         if (json.status === 'ok' && json.records) {
           // Carica i record dal server
@@ -774,7 +811,9 @@
               rejectionReason: row[9] || '',
               babysitterEmail: row[10] || '',
               startTime: formatTimeCell(row[11]),
-              endTime: formatTimeCell(row[12])
+              endTime: formatTimeCell(row[12]),
+              handledBy: row[13] || '',
+              handledAt: row[14] || ''
             };
           });
 
@@ -861,10 +900,12 @@
       pendingOreData = null;
     }
 
-    function setRole(role, email, displayName, remember = true) {
+    function setRole(role, email, displayName, remember = true, token = null) {
       currentRole = role;
       currentEmail = email;
-      const session = JSON.stringify({ role, email, displayName });
+      currentName = displayName || '';
+      authToken = token;
+      const session = JSON.stringify({ role, email, displayName, token });
       if (remember) {
         localStorage.setItem('babysitter_session', session);
         sessionStorage.removeItem('babysitter_session_temp');
@@ -883,10 +924,16 @@
       }
     }
 
-    function logout() {
+    function logout(revoke = true) {
+      if (revoke && authToken) {
+        fetch(GOOGLE_APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'logout', token: authToken }) }).catch(() => {});
+      }
+      authToken = null;
       currentRole = null;
       currentEmail = null;
       localStorage.removeItem('babysitter_session');
+      sessionStorage.removeItem('babysitter_session_temp');
+      localStorage.removeItem(SHEET_ID);
       document.getElementById('login-modal').classList.remove('hidden');
       document.getElementById('login-email').value = '';
       document.getElementById('login-password').value = '';
@@ -911,29 +958,15 @@
       btn.disabled = true;
 
       try {
-        // ── Admin: verifica locale (non richiede Apps Script) ──────────────
-        const adminUser = ADMIN_USERS[email];
-        if (adminUser) {
-          if (adminUser.password === password) {
-            setRole('admin', email, adminUser.name, remember);
-          } else {
-            errEl.textContent = 'Password non corretta';
-            errEl.style.display = 'block';
-          }
-          return;
-        }
-
-        // ── Babysitter: verifica via Apps Script ───────────────────────────
-        const response = await fetch(
-          GOOGLE_APPS_SCRIPT_URL +
-          '?action=checkPassword' +
-          '&email=' + encodeURIComponent(email) +
-          '&password=' + encodeURIComponent(password)
-        );
+        // Verifica credenziali sul backend (POST: la password non finisce nell'URL)
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'login', email, password })
+        });
         const result = await response.json();
 
-        if (result.status === 'ok' && result.role === 'babysitter') {
-          setRole('babysitter', email, result.displayName || 'Babysitter', remember);
+        if (result.status === 'ok' && result.token) {
+          setRole(result.role === 'admin' ? 'admin' : 'babysitter', email, result.displayName || '', remember, result.token);
         } else {
           errEl.textContent = result.message || 'Email o password non corretti';
           errEl.style.display = 'block';
@@ -958,22 +991,16 @@
       if (newPw !== confirmPw) { showToast('Le nuove password non coincidono', 'error'); return; }
       if (newPw.length < 6) { showToast('Password di almeno 6 caratteri', 'error'); return; }
 
-      if (isAdmin) {
-        // Admin: cambia password via Apps Script (aggiorna Config sheet)
-        showToast('Per cambiare la password admin aggiorna direttamente il foglio Config nel Google Sheet.', 'info');
-        return;
-      }
-
       // Babysitter: via Apps Script
       try {
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'changePassword', email: currentEmail, currentPassword: currentPw, newPassword: newPw })
+          body: JSON.stringify({ token: authToken, action: 'changePassword', email: currentEmail, currentPassword: currentPw, newPassword: newPw })
         });
         const result = await response.json();
         if (result.status === 'ok') {
           showToast('Password aggiornata!', 'success');
-          ['pw-current','pw-new','pw-confirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+          ['pw-current','pw-new','pw-confirm','admin-pw-current','admin-pw-new','admin-pw-confirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         } else {
           showToast(result.message || 'Password attuale non corretta', 'error');
         }
@@ -1349,7 +1376,43 @@
       return duplicates;
     }
 
-    async function submitOreDrafts() {
+    // ── Invio con blocco anti-doppio ─────────────────────────────────────
+    let invioInCorso = false;
+    function showSending() {
+      document.getElementById('sending-icon').textContent = '⏳';
+      document.getElementById('sending-icon').className = 'hourglass';
+      document.getElementById('sending-title').textContent = 'Invio in corso…';
+      document.getElementById('sending-msg').textContent = "Attendi qualche secondo: non chiudere l'app e non premere di nuovo.";
+      document.getElementById('sending-ok').style.display = 'none';
+      document.getElementById('sending-overlay').classList.remove('hidden');
+    }
+    function showSent(what) {
+      document.getElementById('sending-icon').textContent = '✅';
+      document.getElementById('sending-icon').className = '';
+      document.getElementById('sending-title').textContent = what + ' inviate!';
+      document.getElementById('sending-msg').textContent = 'Filippo e Anna riceveranno una mail per l\u2019approvazione. Ti arriverà una mail quando la registrazione sarà approvata o rifiutata.';
+      document.getElementById('sending-ok').style.display = 'block';
+    }
+    function hideSending() { document.getElementById('sending-overlay').classList.add('hidden'); }
+    async function withSending(what, fn) {
+      if (invioInCorso) return;
+      invioInCorso = true;
+      document.querySelectorAll('#draft-ore-list button, #draft-assenza-list button').forEach(b => b.disabled = true);
+      showSending();
+      try {
+        const res = await fn();
+        if (res === 'ok') showSent(what); else hideSending();
+      } catch (e) {
+        hideSending();
+      } finally {
+        invioInCorso = false;
+        document.querySelectorAll('#draft-ore-list button, #draft-assenza-list button').forEach(b => b.disabled = false);
+      }
+    }
+    function submitOreDrafts() { return withSending('Ore', _submitOreDrafts); }
+    function submitAssenzaDrafts() { return withSending('Assenze', _submitAssenzaDrafts); }
+
+    async function _submitOreDrafts() {
       if (drafts.ore.length === 0) {
         alert('Nessuna bozza da inviare');
         return;
@@ -1368,7 +1431,7 @@
         for (let ore of drafts.ore) {
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            body: JSON.stringify({
+            body: JSON.stringify({ token: authToken,
               action: 'append',
               data: {
                 date: ore.date,
@@ -1389,7 +1452,8 @@
           });
           
           const result = await response.json();
-          if (result.status !== 'ok') throw new Error('Errore invio');
+          if (result.code === 'auth') { sessionExpired(); return; }
+          if (result.status !== 'ok') throw new Error(result.message || 'Errore invio');
         }
 
         data.records = data.records.concat(drafts.ore.map(o => ({
@@ -1413,14 +1477,14 @@
         updateDraftView();
         updateBabysitterView();
         setSyncStatus('ok', '✓ Ore inviate');
-        alert('Ore inviate! Riceverai una email di notifica.');
+        return 'ok';
       } catch (error) {
         setSyncStatus('error', '✗ Errore invio');
         alert('Errore: ' + error.message);
       }
     }
 
-    async function submitAssenzaDrafts() {
+    async function _submitAssenzaDrafts() {
       if (drafts.assenze.length === 0) {
         alert('Nessuna bozza da inviare');
         return;
@@ -1432,7 +1496,7 @@
         for (let assenza of drafts.assenze) {
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            body: JSON.stringify({
+            body: JSON.stringify({ token: authToken,
               action: 'append',
               data: {
                 date: assenza.date,
@@ -1451,7 +1515,8 @@
           });
           
           const result = await response.json();
-          if (result.status !== 'ok') throw new Error('Errore invio');
+          if (result.code === 'auth') { sessionExpired(); return; }
+          if (result.status !== 'ok') throw new Error(result.message || 'Errore invio');
         }
 
         data.records = data.records.concat(drafts.assenze.map(a => ({
@@ -1473,7 +1538,7 @@
         updateDraftView();
         updateBabysitterView();
         setSyncStatus('ok', '✓ Assenze inviate');
-        alert('Assenze inviate! Riceverai una email di notifica.');
+        return 'ok';
       } catch (error) {
         setSyncStatus('error', '✗ Errore invio');
         alert('Errore: ' + error.message);
@@ -1508,6 +1573,265 @@
         }
       });
       return { extraNetH, extraBalanceH: extraH, fromExtraDays, fromContractDays, byRecord };
+    }
+
+
+    // ── Dashboard admin: estratto conto ore extra ──────────────────────────
+    const fmt1 = x => (Math.round(x * 10) / 10).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const fmtSigned = x => (x > 0.049 ? '+' : '') + fmt1(x);
+    const MESI_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+    const CONTRACT_START = '2026-09-08';
+    const isoDay = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    function mondayOf(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      return isoDay(d);
+    }
+    function periodKey(dateStr, mode) { return mode === 'day' ? dateStr : mode === 'week' ? mondayOf(dateStr) : dateStr.slice(0, 7); }
+    function nextPeriod(key, mode) {
+      if (mode === 'week' || mode === 'day') { const d = new Date(key + 'T00:00:00'); d.setDate(d.getDate() + (mode === 'week' ? 7 : 1)); return isoDay(d); }
+      let [y, m] = key.split('-').map(Number); m === 12 ? (y++, m = 1) : m++;
+      return `${y}-${String(m).padStart(2, '0')}`;
+    }
+    function periodLabel(key, mode) {
+      if (mode === 'day') {
+        const d = new Date(key + 'T00:00:00');
+        return `${['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][d.getDay()]} ${key.slice(8, 10)}/${key.slice(5, 7)}`;
+      }
+      if (mode === 'week') {
+        const a = new Date(key + 'T00:00:00'), b = new Date(a); b.setDate(b.getDate() + 6);
+        const mm = d => MESI_IT[d.getMonth()].toLowerCase();
+        return a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${mm(a)}` : `${a.getDate()} ${mm(a)}–${b.getDate()} ${mm(b)}`;
+      }
+      const [y, m] = key.split('-');
+      return `${MESI_IT[+m - 1]} ${y}`;
+    }
+
+    function buildLedger(records, mode) {
+      const alloc = computeFerieAllocation(records);
+      const approved = records.filter(r => r.status === 'approved' && (r.type === 'ore' || r.type === 'ferie'));
+      const periods = {};
+      const today = isoDay(new Date());
+      const lastDate = approved.reduce((m, r) => r.date > m ? r.date : m, today);
+      const lastKey = periodKey(lastDate, mode);
+      for (let k = periodKey(CONTRACT_START, mode); k <= lastKey; k = nextPeriod(k, mode)) {
+        periods[k] = { plus: 0, minus: 0, ferieExtraGg: 0, ferieContrGg: 0, lavorati: [], n: 0, detail: [] };
+      }
+      approved.slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(r => {
+        const P = periods[periodKey(r.date, mode)]; if (!P) return;
+        P.n++;
+        if (r.type === 'ore') {
+          const d = (r.hours || 0) - (r.contractHours || 0);
+          P.detail.push(`${fmt1(r.hours)} h su ${fmt1(r.contractHours)}${r.startTime && r.endTime ? ' · ' + r.startTime + '–' + r.endTime : ''}`);
+          if (d > 0) P.plus += d; else P.minus += d;
+        } else {
+          const fe = alloc.byRecord.get(r) || 0;
+          P.ferieExtraGg += fe; P.ferieContrGg += 1 - fe;
+          P.detail.push('Ferie');
+          const dd = r.date.slice(8, 10) + '/' + r.date.slice(5, 7);
+          if (fe >= 0.999) P.lavorati.push(dd);
+          else if (fe > 0.001) P.lavorati.push(`${dd} (${fmt1(fe * HOURS_PER_FERIE_DAY)} h extra + ${fmt1(1 - fe)} gg ferie)`);
+        }
+      });
+      let saldoH = 0, contrUsate = 0;
+      const rows = Object.entries(periods).map(([k, P]) => {
+        const residuoInizio = ANNUAL_FERIE_DAYS - contrUsate + saldoH / HOURS_PER_FERIE_DAY;
+        saldoH += P.plus + P.minus - P.ferieExtraGg * HOURS_PER_FERIE_DAY;
+        contrUsate += P.ferieContrGg;
+        const residuo = ANNUAL_FERIE_DAYS - contrUsate + saldoH / HOURS_PER_FERIE_DAY;
+        return { key: k, label: periodLabel(k, mode), ...P, saldoH, residuo, residuoInizio, maturateGg: (P.plus + P.minus) / HOURS_PER_FERIE_DAY };
+      });
+      return { alloc, rows };
+    }
+
+    function buildEstrattoConto(records) { return buildLedger(records, 'month'); }
+
+    let ecView = 'month';
+    function setEcView(v) {
+      ecView = v;
+      document.getElementById('btn-ec-month').classList.toggle('active', v === 'month');
+      document.getElementById('btn-ec-week').classList.toggle('active', v === 'week');
+      document.getElementById('btn-ec-day').classList.toggle('active', v === 'day');
+      renderExtraDashboard();
+    }
+
+    function renderExtraDashboard() {
+      const { alloc } = buildEstrattoConto(data.records);
+      let { rows } = buildLedger(data.records, ecView);
+      if (ecView === 'day') rows = rows.filter(r => r.n > 0);
+      const compensateH = alloc.fromExtraDays * HOURS_PER_FERIE_DAY;
+      const saldoH = alloc.extraBalanceH;
+      const residuo = ANNUAL_FERIE_DAYS - alloc.fromContractDays + saldoH / HOURS_PER_FERIE_DAY;
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.innerHTML = v; };
+
+      set('kpi-maturate', fmt1(alloc.extraNetH) + ' h');
+      set('kpi-maturate-sub', `= ${fmt1(alloc.extraNetH / HOURS_PER_FERIE_DAY)} gg di ferie extra`);
+      set('kpi-compensate', fmt1(compensateH) + ' h');
+      set('kpi-compensate-sub', `${fmt1(alloc.fromExtraDays)} gg di ferie pagati con le extra`);
+      set('kpi-saldo', fmt1(saldoH) + ' h');
+      set('kpi-saldo-sub', saldoH < -0.049
+        ? `⚠ Silvia deve recuperare ${fmt1(-saldoH)} h`
+        : `= ${fmt1(saldoH / HOURS_PER_FERIE_DAY)} gg di ferie extra disponibili`);
+      const card = document.getElementById('kpi-saldo-card');
+      if (card) card.style.borderColor = saldoH < -0.049 ? 'var(--red)' : 'var(--brand)';
+      const saldoEl = document.getElementById('kpi-saldo');
+      if (saldoEl) saldoEl.style.color = saldoH < -0.049 ? 'var(--red)' : 'var(--gray-900)';
+      set('kpi-residuo', fmt1(residuo) + ' gg');
+      set('kpi-residuo-sub', `${fmt1(ANNUAL_FERIE_DAYS - alloc.fromContractDays)} contrattuali + ${fmt1(saldoH / HOURS_PER_FERIE_DAY)} extra`);
+
+      const cell = (main, sub) => `<span class="ec-main">${main}</span>${sub ? `<span class="ec-sub">${sub}</span>` : ''}`;
+      const IT_MONTHS_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+      let lastMonth = '';
+      const tr = rows.map(r => {
+        let sep = '';
+        if (ecView === 'week') {
+          const mk = r.key.slice(0, 7);
+          if (mk !== lastMonth) {
+            lastMonth = mk;
+            sep = `<tr class="ec-month"><td colspan="8">${IT_MONTHS_FULL[+mk.slice(5, 7) - 1]} ${mk.slice(0, 4)}</td></tr>`;
+          }
+        } else if (ecView === 'day') {
+          const wk = mondayOf(r.key);
+          if (wk !== lastMonth) {
+            lastMonth = wk;
+            sep = `<tr class="ec-month"><td colspan="8">Settimana ${periodLabel(wk, 'week')} ${wk.slice(0, 4)}</td></tr>`;
+          }
+        }
+        return sep + `
+        <tr>
+          <td class="ec-strong" style="white-space:nowrap;">${r.label}${ecView === 'day' && r.detail.length ? `<span class="ec-sub" style="font-weight:400;">${r.detail.join('<br>')}</span>` : ''}</td>
+          <td>${r.plus ? cell('+' + fmt1(r.plus) + ' h') : '—'}</td>
+          <td>${r.minus ? cell(fmt1(r.minus) + ' h') : '—'}</td>
+          <td>${r.ferieExtraGg ? cell(fmt1(r.ferieExtraGg) + ' gg', '−' + fmt1(r.ferieExtraGg * HOURS_PER_FERIE_DAY) + ' h') : '—'}</td>
+          <td>${r.ferieContrGg ? cell(fmt1(r.ferieContrGg) + ' gg') : '—'}</td>
+          <td class="ec-strong ${r.saldoH < -0.049 ? 'ec-neg' : ''}">${cell(fmt1(r.saldoH) + ' h', '= ' + fmt1(r.saldoH / HOURS_PER_FERIE_DAY) + ' gg')}</td>
+          <td class="ec-strong">${fmt1(r.residuo)} gg</td>
+          <td class="ec-dates">${r.lavorati.length ? r.lavorati.join('<br>') : '—'}</td>
+        </tr>`;
+      }).join('');
+      set('estratto-conto', `
+        <table class="ec-table">
+          <thead><tr>
+            <th>${ecView === 'day' ? 'Giorno' : ecView === 'week' ? 'Settimana' : 'Mese'}</th><th>Ore extra<br>fatte</th><th>Ore in<br>difetto</th>
+            <th>Ferie pagate<br>con extra</th><th>Ferie<br>contrattuali</th>
+            <th>Saldo ore<br>extra</th><th>Ferie residue<br>totali</th>
+            <th>Da registrare come<br>lavorati su Mondocolf</th>
+          </tr></thead>
+          <tbody>${tr || '<tr><td colspan="8">Nessun dato</td></tr>'}</tbody>
+        </table>`);
+    }
+
+    let saldoView = 'month';
+    const SALDO_WEEKS_SHOWN = 8;
+    function setSaldoView(v) {
+      saldoView = v;
+      document.getElementById('btn-saldo-month').classList.toggle('active', v === 'month');
+      document.getElementById('btn-saldo-week').classList.toggle('active', v === 'week');
+      drawSaldoChart();
+    }
+
+    function drawSaldoChart() {
+      const canvas = document.getElementById('saldoChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+      const mode = saldoView;
+      let { rows } = buildLedger(data.records, mode);
+      if (window.saldoChartObj instanceof Chart) window.saldoChartObj.destroy();
+
+      // Punto di partenza: 26 ferie contrattuali (mensile) oppure il saldo all'inizio della finestra (settimanale)
+      if (mode === 'week') rows = rows.slice(-SALDO_WEEKS_SHOWN);
+      const startLevel = mode === 'week' && rows.length ? rows[0].residuoInizio : ANNUAL_FERIE_DAYS;
+      const startLabel = mode === 'week' && rows.length
+        ? ['Saldo al', rows[0].label.split('–')[0] + ' ' + (rows[0].label.split(' ').pop())]
+        : ['Ferie', 'contrattuali'];
+      const steps = [{ label: startLabel, kind: 'tot', to: startLevel,
+        tip: [mode === 'week' ? `Ferie residue a inizio periodo: ${fmt1(startLevel)} gg` : 'Dotazione annua: 26 gg'] }];
+      let lvl = startLevel;
+      rows.forEach((r, i) => {
+        const tag = mode === 'week' ? r.label : r.label.split(' ')[0];
+        const mat = Math.round(r.maturateGg * 10) / 10;
+        if (Math.abs(mat) >= 0.05) {
+          steps.push({ label: [tag, mat > 0 ? '+ extra' : '− difetto'], kind: mat > 0 ? 'inc' : 'dec', from: lvl, to: lvl + mat,
+            tip: [`Ore extra nette: ${fmtSigned(r.plus + r.minus)} h`, `= ${fmtSigned(mat)} gg di ferie`] });
+          lvl += mat;
+        }
+        const god = r.ferieExtraGg + r.ferieContrGg;
+        if (god >= 0.05) {
+          steps.push({ label: [tag, '− ferie'], kind: 'dec', from: lvl, to: lvl - god,
+            tip: [`Ferie godute: ${fmt1(god)} gg`, `di cui pagate con extra: ${fmt1(r.ferieExtraGg)} gg`, `di cui contrattuali: ${fmt1(r.ferieContrGg)} gg`] });
+          lvl -= god;
+        }
+        lvl = r.residuo;
+        const last = i === rows.length - 1;
+        if (mode === 'month' || last) {
+          steps.push({ label: mode === 'month' ? [tag, 'residuo'] : ['Saldo', 'attuale'], kind: 'tot', to: r.residuo,
+            tip: [`Ferie residue: ${fmt1(r.residuo)} gg`, `(${fmt1(ANNUAL_FERIE_DAYS - 0)} contrattuali di base)`].slice(0, 1) });
+        }
+      });
+
+      const vals = steps.flatMap(st => st.kind === 'tot' ? [st.to] : [st.from, st.to]);
+      const yMin = Math.max(0, Math.floor(Math.min(...vals) - 3));
+      const yMax = Math.ceil(Math.max(...vals) + 1.5);
+      const note = document.getElementById('saldo-chart-note');
+      if (note) note.textContent = (mode === 'week'
+          ? `Ultime ${SALDO_WEEKS_SHOWN} settimane: si parte dal saldo di inizio periodo; le ore extra aggiungono giorni, le ferie godute (e le ore in difetto) ne tolgono.`
+          : 'Si parte dalle 26 ferie contrattuali: ogni mese le ore extra aggiungono giorni, le ferie godute (e le ore in difetto) ne tolgono.')
+        + (yMin > 0 ? ` La scala verticale parte da ${yMin} giorni (non da zero) per rendere visibili anche le variazioni piccole.` : '');
+
+      const COL = { tot: '#0D9488', inc: '#5B6CF9', dec: '#D97706' };
+      const ds = (kind, name) => ({
+        label: name,
+        data: steps.map(st => st.kind === kind ? (kind === 'tot' ? [yMin, st.to] : [Math.min(st.from, st.to), Math.max(st.from, st.to)]) : null),
+        backgroundColor: COL[kind], borderRadius: 4, borderSkipped: false, grouped: false, maxBarThickness: 46
+      });
+
+      window.saldoChartObj = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: { labels: steps.map(st => st.label), datasets: [ds('tot', 'Ferie residue'), ds('inc', 'Aumento (ore extra)'), ds('dec', 'Diminuzione (ferie godute o ore in difetto)')] },
+        options: {
+          responsive: true, maintainAspectRatio: true,
+          layout: { padding: { top: 18 } },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true } },
+            tooltip: {
+              filter: item => item.raw !== null,
+              callbacks: { title: items => steps[items[0].dataIndex].label.join(' '), label: item => steps[item.dataIndex].tip }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, autoSkip: false, maxRotation: 0 } },
+            y: { min: yMin, max: yMax, title: { display: true, text: 'Giorni di ferie' }, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.06)' } }
+          }
+        },
+        plugins: [{
+          id: 'waterfallExtras',
+          afterDatasetsDraw(ch) {
+            const ctx = ch.ctx, y = ch.scales.y;
+            const barAt = i => { for (let d = 0; d < 3; d++) { if (ch.data.datasets[d].data[i]) return ch.getDatasetMeta(d).data[i]; } return null; };
+            ctx.save();
+            ctx.strokeStyle = '#94A3B8'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+            for (let i = 0; i < steps.length - 1; i++) {
+              const a = barAt(i), b = barAt(i + 1); if (!a || !b) continue;
+              const yy = y.getPixelForValue(steps[i].to);
+              ctx.beginPath(); ctx.moveTo(a.x + a.width / 2, yy); ctx.lineTo(b.x - b.width / 2, yy); ctx.stroke();
+            }
+            ctx.setLineDash([]);
+            ctx.font = '600 11px Inter, sans-serif'; ctx.fillStyle = '#334155'; ctx.textAlign = 'center';
+            steps.forEach((st, i) => {
+              const el = barAt(i); if (!el) return;
+              const txt = st.kind === 'tot' ? fmt1(st.to) : fmtSigned(st.to - st.from);
+              ctx.fillText(txt, el.x, y.getPixelForValue(st.kind === 'tot' ? st.to : Math.max(st.from, st.to)) - 5);
+            });
+            // segno di interruzione dell'asse quando non parte da zero
+            if (yMin > 0) {
+              const x0 = ch.chartArea.left, yb = ch.chartArea.bottom;
+              ctx.strokeStyle = '#64748B'; ctx.lineWidth = 1.5; ctx.beginPath();
+              ctx.moveTo(x0 - 6, yb - 4); ctx.lineTo(x0 + 6, yb - 8); ctx.moveTo(x0 - 6, yb - 9); ctx.lineTo(x0 + 6, yb - 13); ctx.stroke();
+            }
+            ctx.restore();
+          }
+        }]
+      });
     }
 
     function updateBabysitterView() {
@@ -1590,8 +1914,8 @@
           recordsByDate[d].push(r);
         });
 
-      const statusBadge = (s) => {
-        if (s === 'approved') return '<span class="badge badge-green">✓ Approvato</span>';
+      const statusBadge = (s, by) => {
+        if (s === 'approved') return `<span class="badge badge-green">✓ Approvato${by ? ' · ' + by : ''}</span>`;
         if (s === 'pending_approval') return '<span class="badge badge-amber">⏳ In attesa</span>';
         if (s === 'rejected') return '<span class="badge badge-red">✗ Rifiutato</span>';
         return `<span class="badge badge-gray">${s}</span>`;
@@ -1671,7 +1995,7 @@
                 <td style="padding:6px 8px; text-align:center;">${r.type === 'ore' ? oreCont : '—'}</td>
                 <td style="padding:6px 8px; text-align:center;">${oreEff.toFixed(1)}</td>
                 <td style="padding:6px 8px; text-align:center;">${extra}</td>
-                <td style="padding:6px 8px;">${statusBadge(r.status)}</td>
+                <td style="padding:6px 8px;">${statusBadge(r.status, r.handledBy)}</td>
                 <td style="padding:6px 8px; font-size:11px; color:#52514e;">${r.notes || ''}</td>
               </tr>`;
           });
@@ -1727,29 +2051,7 @@
       const approved = data.records.filter(r => r.status === 'approved');
       const pending = data.records.filter(r => r.status === 'pending_approval');
       
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-      const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
-      const approvedThisMonth = approved.filter(r => {
-        const d = new Date(r.date);
-        return d >= monthStart && d <= monthEnd && r.type === 'ore';
-      });
-      const oreThisMonth = approvedThisMonth.reduce((sum, r) => sum + (r.hours || 0), 0);
-      const expectedOresThisMonth = 52;
-      const progress = Math.min(100, Math.round((oreThisMonth / expectedOresThisMonth) * 100));
-      
-      document.getElementById('progress-ore').textContent = progress + '%';
-      document.getElementById('progress-bar').style.width = progress + '%';
-      document.getElementById('ore-mese').textContent = oreThisMonth.toFixed(1);
-
-      const today = new Date();
-      const yearStart = today.getMonth() >= 8 ? new Date(today.getFullYear(), 8, 1) : new Date(today.getFullYear() - 1, 8, 1);
-      const yearEnd = new Date(yearStart.getFullYear() + 1, 7, 31);
-      const approvedThisYear = approved.filter(r => {
-        const d = new Date(r.date);
-        return d >= yearStart && d <= yearEnd && r.type === 'ore';
-      });
-      const oreThisYear = approvedThisYear.reduce((sum, r) => sum + (r.hours || 0), 0);
-      document.getElementById('ore-anno').textContent = oreThisYear.toFixed(1);
+      renderExtraDashboard();
 
       const pendingHtml = document.getElementById('filippo-pending');
       if (pending.length === 0) {
@@ -1773,10 +2075,13 @@
       if (approved.length === 0) {
         historyHtml.innerHTML = '<p class="muted">Nessun dato.</p>';
       } else {
-        historyHtml.innerHTML = approved.slice().reverse().map(r => `
-          <div style="padding: 8px 0; border-bottom: 1px solid #e1e0d9;">
-            <strong>${r.date} (${r.dayOfWeek})</strong> ${r.type === 'ore' ? '— ' + r.hours + ' ore' + (timeRange(r) ? ' · ' + timeRange(r) : '') : '— ' + (r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro')}<br/>
-            <span style="font-size: 11px; color: #52514e;">${r.submittedAt}</span>
+        historyHtml.innerHTML = approved.slice().sort((a, b) => b.date.localeCompare(a.date)).map(r => `
+          <div style="padding: 8px 0; border-bottom: 1px solid #e1e0d9; display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+            <div>
+              <strong>${r.date} (${r.dayOfWeek})</strong> ${r.type === 'ore' ? '— ' + r.hours + ' ore' + (timeRange(r) ? ' · ' + timeRange(r) : '') : '— ' + (r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro')}<br/>
+              <span style="font-size: 11px; color: #52514e;">inviata il ${r.submittedAt || '—'}</span>
+            </div>
+            <span class="badge badge-green" style="white-space:nowrap;">✓ ${r.handledBy || '—'}</span>
           </div>
         `).join('');
       }
@@ -1785,9 +2090,7 @@
       checkAndShowDoppioni();
 
       // Disegna i grafici
-      drawMonthlyHoursChart();
-      drawExtraFerieChart();
-      drawFerieStockChart();
+      drawSaldoChart();
     }
 
     function checkAndShowDoppioni() {
@@ -1837,14 +2140,15 @@
         // Marca come "deleted" sul foglio Google
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
-          body: JSON.stringify({
+          body: JSON.stringify({ token: authToken,
             action: 'updateStatus',
             rowIndex: idx,
-            status: 'deleted'
+            status: 'deleted',
+            babysitterDate: data.records[idx].date
           })
         });
 
-        if (response.ok) {
+        if (await apiOk(response)) {
           data.records[idx].status = 'deleted';
           localStorage.setItem(SHEET_ID, JSON.stringify(data.records));
           setSyncStatus('ok', '✓ Eliminato');
@@ -2276,7 +2580,7 @@
         setSyncStatus('syncing', 'Approvazione...');
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
-          body: JSON.stringify({
+          body: JSON.stringify({ token: authToken,
             action: 'updateStatus',
             rowIndex: idx,
             status: 'approved',
@@ -2285,8 +2589,9 @@
           })
         });
         
-        if (response.ok) {
+        if (await apiOk(response)) {
           data.records[idx].status = 'approved';
+          data.records[idx].handledBy = currentName;
           localStorage.setItem(SHEET_ID, JSON.stringify(data.records));
           updateDashboard();
           setSyncStatus('ok', '✓ Approvato');
@@ -2319,7 +2624,7 @@
         setSyncStatus('syncing', 'Rifiuto...');
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
-          body: JSON.stringify({
+          body: JSON.stringify({ token: authToken,
             action: 'updateStatus',
             rowIndex: idx,
             status: 'rejected',
@@ -2329,8 +2634,9 @@
           })
         });
         
-        if (response.ok) {
+        if (await apiOk(response)) {
           data.records[idx].status = 'rejected';
+          data.records[idx].handledBy = currentName;
           data.records[idx].rejectionReason = reason;
           localStorage.setItem(SHEET_ID, JSON.stringify(data.records));
           updateDashboard();
@@ -2348,8 +2654,8 @@
       if (stored) {
         try {
           const session = JSON.parse(stored);
-          if (session && session.role && session.email) {
-            setRole(session.role, session.email, session.displayName);
+          if (session && session.role && session.email && session.token) {
+            setRole(session.role, session.email, session.displayName, !!localStorage.getItem('babysitter_session'), session.token);
           }
         } catch(e) {
           localStorage.removeItem('babysitter_session');
