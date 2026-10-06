@@ -781,6 +781,15 @@
       return str;
     }
 
+    // Ore in formato leggibile, al minuto: 3.1667 → "3 h 10 min"
+    function fmtHM(h, signed = false) {
+      const tot = Math.round(Math.abs(h || 0) * 60);
+      const H = Math.floor(tot / 60), M = tot % 60;
+      const body = tot === 0 ? '0 min' : H && M ? `${H} h ${M} min` : H ? `${H} h` : `${M} min`;
+      const sign = tot === 0 ? '' : (h < 0 ? '−' : (signed ? '+' : ''));
+      return sign + body;
+    }
+
     function timeRange(r) {
       return (r.startTime && r.endTime) ? `🕐 ${r.startTime} → ${r.endTime}` : '';
     }
@@ -1175,6 +1184,7 @@
       
       if (!startStr || !endStr) {
         document.getElementById('calculated-hours').textContent = '0';
+        document.getElementById('calculated-hours').dataset.hours = '0';
         return;
       }
 
@@ -1187,8 +1197,9 @@
       let diffMinutes = endMinutes - startMinutes;
       if (diffMinutes < 0) diffMinutes += 24 * 60;
       
-      const hours = (diffMinutes / 60).toFixed(2);
-      document.getElementById('calculated-hours').textContent = hours;
+      const el = document.getElementById('calculated-hours');
+      el.dataset.hours = String(diffMinutes / 60);
+      el.textContent = fmtHM(diffMinutes / 60);
     }
 
     function calculateExtraHoursWithCompensation(dateStr, hoursInput, contractHours) {
@@ -1198,7 +1209,7 @@
 
     function addOreToDraft() {
       const dateStr = document.getElementById('ore-date').value;
-      const hoursInput = parseFloat(document.getElementById('calculated-hours').textContent);
+      const hoursInput = parseFloat(document.getElementById('calculated-hours').dataset.hours || '0');
       const notes = document.getElementById('ore-notes').value.trim();
       
       if (!dateStr || hoursInput <= 0) {
@@ -1259,9 +1270,9 @@
         startTime: document.getElementById('ore-start').value,
         endTime: document.getElementById('ore-end').value,
         dayOfWeek: dayNames[dayIndex],
-        hours: Math.round(hoursInput * 2) / 2,
+        hours: Math.round(hoursInput * 60) / 60,   // minuti esatti
         contractHours: contractHours,
-        extraHours: Math.round(extraHours * 2) / 2,
+        extraHours: Math.round(extraHours * 60) / 60,
         notes: notes
       };
 
@@ -1273,6 +1284,7 @@
       document.getElementById('ore-end').value = '';
       document.getElementById('ore-notes').value = '';
       document.getElementById('calculated-hours').textContent = '0';
+      document.getElementById('calculated-hours').dataset.hours = '0';
       document.getElementById('contract-hours').textContent = '-';
       document.getElementById('day-label').textContent = 'Giorno';
 
@@ -1318,7 +1330,7 @@
         document.getElementById('draft-ore-list').innerHTML = drafts.ore.map((o, i) => `
           <div class="draft-box">
             <h4>${o.date} (${o.dayOfWeek})</h4>
-            <p><strong>${o.hours} ore</strong> ${o.extraHours > 0 ? '(+' + o.extraHours + ' extra)' : ''} ${o.startTime && o.endTime ? '· ' + o.startTime + '–' + o.endTime : ''}</p>
+            <p><strong>${fmtHM(o.hours)}</strong> ${o.extraHours ? '(' + fmtHM(o.extraHours, true) + ' rispetto al contratto)' : ''} ${o.startTime && o.endTime ? '· ' + o.startTime + '–' + o.endTime : ''}</p>
             ${o.notes ? `<p style="font-size: 11px; color: #52514e;">Note: ${o.notes}</p>` : ''}
             <div class="button-group" style="margin-top: 8px;">
               <button class="btn btn-secondary" onclick="deleteOreDraft(${i})" style="font-size: 12px;">Elimina</button>
@@ -1623,7 +1635,7 @@
         P.n++;
         if (r.type === 'ore') {
           const d = (r.hours || 0) - (r.contractHours || 0);
-          P.detail.push(`${fmt1(r.hours)} h su ${fmt1(r.contractHours)}${r.startTime && r.endTime ? ' · ' + r.startTime + '–' + r.endTime : ''}`);
+          P.detail.push(`${fmtHM(r.hours)} su ${fmtHM(r.contractHours)}${r.startTime && r.endTime ? ' · ' + r.startTime + '–' + r.endTime : ''}`);
           if (d > 0) P.plus += d; else P.minus += d;
         } else {
           const fe = alloc.byRecord.get(r) || 0;
@@ -1631,7 +1643,7 @@
           P.detail.push('Ferie');
           const dd = r.date.slice(8, 10) + '/' + r.date.slice(5, 7);
           if (fe >= 0.999) P.lavorati.push(dd);
-          else if (fe > 0.001) P.lavorati.push(`${dd} (${fmt1(fe * HOURS_PER_FERIE_DAY)} h extra + ${fmt1(1 - fe)} gg ferie)`);
+          else if (fe > 0.001) P.lavorati.push(`${dd} (${fmtHM(fe * HOURS_PER_FERIE_DAY)} extra + ${fmt1(1 - fe)} gg ferie)`);
         }
       });
       let saldoH = 0, contrUsate = 0;
@@ -1665,13 +1677,13 @@
       const residuo = ANNUAL_FERIE_DAYS - alloc.fromContractDays + saldoH / HOURS_PER_FERIE_DAY;
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.innerHTML = v; };
 
-      set('kpi-maturate', fmt1(alloc.extraNetH) + ' h');
+      set('kpi-maturate', fmtHM(alloc.extraNetH));
       set('kpi-maturate-sub', `= ${fmt1(alloc.extraNetH / HOURS_PER_FERIE_DAY)} gg di ferie extra`);
-      set('kpi-compensate', fmt1(compensateH) + ' h');
+      set('kpi-compensate', fmtHM(compensateH));
       set('kpi-compensate-sub', `${fmt1(alloc.fromExtraDays)} gg di ferie pagati con le extra`);
-      set('kpi-saldo', fmt1(saldoH) + ' h');
+      set('kpi-saldo', fmtHM(saldoH));
       set('kpi-saldo-sub', saldoH < -0.049
-        ? `⚠ Silvia deve recuperare ${fmt1(-saldoH)} h`
+        ? `⚠ Silvia deve recuperare ${fmtHM(-saldoH)}`
         : `= ${fmt1(saldoH / HOURS_PER_FERIE_DAY)} gg di ferie extra disponibili`);
       const card = document.getElementById('kpi-saldo-card');
       if (card) card.style.borderColor = saldoH < -0.049 ? 'var(--red)' : 'var(--brand)';
@@ -1701,11 +1713,11 @@
         return sep + `
         <tr>
           <td class="ec-strong" style="white-space:nowrap;">${r.label}${ecView === 'day' && r.detail.length ? `<span class="ec-sub" style="font-weight:400;">${r.detail.join('<br>')}</span>` : ''}</td>
-          <td>${r.plus ? cell('+' + fmt1(r.plus) + ' h') : '—'}</td>
-          <td>${r.minus ? cell(fmt1(r.minus) + ' h') : '—'}</td>
-          <td>${r.ferieExtraGg ? cell(fmt1(r.ferieExtraGg) + ' gg', '−' + fmt1(r.ferieExtraGg * HOURS_PER_FERIE_DAY) + ' h') : '—'}</td>
+          <td>${r.plus > 0.001 ? cell(fmtHM(r.plus, true)) : '—'}</td>
+          <td>${r.minus < -0.001 ? cell(fmtHM(r.minus)) : '—'}</td>
+          <td>${r.ferieExtraGg ? cell(fmt1(r.ferieExtraGg) + ' gg', '−' + fmtHM(r.ferieExtraGg * HOURS_PER_FERIE_DAY)) : '—'}</td>
           <td>${r.ferieContrGg ? cell(fmt1(r.ferieContrGg) + ' gg') : '—'}</td>
-          <td class="ec-strong ${r.saldoH < -0.049 ? 'ec-neg' : ''}">${cell(fmt1(r.saldoH) + ' h', '= ' + fmt1(r.saldoH / HOURS_PER_FERIE_DAY) + ' gg')}</td>
+          <td class="ec-strong ${r.saldoH < -0.049 ? 'ec-neg' : ''}">${cell(fmtHM(r.saldoH), '= ' + fmt1(r.saldoH / HOURS_PER_FERIE_DAY) + ' gg')}</td>
           <td class="ec-strong">${fmt1(r.residuo)} gg</td>
           <td class="ec-dates">${r.lavorati.length ? r.lavorati.join('<br>') : '—'}</td>
         </tr>`;
@@ -1752,7 +1764,7 @@
         const mat = Math.round(r.maturateGg * 10) / 10;
         if (Math.abs(mat) >= 0.05) {
           steps.push({ label: [tag, mat > 0 ? '+ extra' : '− difetto'], kind: mat > 0 ? 'inc' : 'dec', from: lvl, to: lvl + mat,
-            tip: [`Ore extra nette: ${fmtSigned(r.plus + r.minus)} h`, `= ${fmtSigned(mat)} gg di ferie`] });
+            tip: [`Ore extra nette: ${fmtHM(r.plus + r.minus, true)}`, `= ${fmtSigned(mat)} gg di ferie`] });
           lvl += mat;
         }
         const god = r.ferieExtraGg + r.ferieContrGg;
@@ -1846,7 +1858,7 @@
       const contractResidue = r1(ANNUAL_FERIE_DAYS - a.fromContractDays);
 
       document.getElementById('ferie-extra').textContent = extraDays;
-      document.getElementById('ferie-extra-ore').textContent = `saldo ${r1(a.extraBalanceH)} h`;
+      document.getElementById('ferie-extra-ore').textContent = `saldo ${fmtHM(a.extraBalanceH)}`;
       document.getElementById('ferie-base').textContent = contractResidue;
       document.getElementById('ferie-godute').textContent = r1(a.fromExtraDays + a.fromContractDays);
       document.getElementById('ferie-godute-split').textContent = `${r1(a.fromExtraDays)} da extra · ${r1(a.fromContractDays)} contrattuali`;
@@ -1975,9 +1987,9 @@
             let extra = 'N/A';
 
             if (r.type === 'ore') {
-              const diff = Math.round((oreEff - oreCont) * 10) / 10;
-              const color = diff > 0 ? '#639922' : diff < 0 ? '#e34948' : '#333';
-              extra = `<span style="color:${color};font-weight:500;">${diff > 0 ? '+' : ''}${diff}</span>`;
+              const diff = oreEff - oreCont;
+              const color = diff > 0.001 ? '#639922' : diff < -0.001 ? '#e34948' : '#333';
+              extra = `<span style="color:${color};font-weight:500;">${fmtHM(diff, true)}</span>`;
               oreEffTot += oreEff;
               oreContTot += oreCont;
               extraTot += diff;
@@ -1992,8 +2004,8 @@
                 <td style="padding:6px 8px;">${tipo}</td>
                 <td style="padding:6px 8px; text-align:center; white-space:nowrap;">${r.type === 'ore' && r.startTime ? r.startTime : '—'}</td>
                 <td style="padding:6px 8px; text-align:center; white-space:nowrap;">${r.type === 'ore' && r.endTime ? r.endTime : '—'}</td>
-                <td style="padding:6px 8px; text-align:center;">${r.type === 'ore' ? oreCont : '—'}</td>
-                <td style="padding:6px 8px; text-align:center;">${oreEff.toFixed(1)}</td>
+                <td style="padding:6px 8px; text-align:center;">${r.type === 'ore' ? fmtHM(oreCont) : '—'}</td>
+                <td style="padding:6px 8px; text-align:center;">${fmtHM(oreEff)}</td>
                 <td style="padding:6px 8px; text-align:center;">${extra}</td>
                 <td style="padding:6px 8px;">${statusBadge(r.status, r.handledBy)}</td>
                 <td style="padding:6px 8px; font-size:11px; color:#52514e;">${r.notes || ''}</td>
@@ -2026,9 +2038,9 @@
           <tfoot>
             <tr>
               <td colspan="5">Totale mese</td>
-              <td style="text-align:center;">${oreContTot.toFixed(1)}</td>
-              <td style="text-align:center;">${oreEffTot.toFixed(1)}</td>
-              <td style="text-align:center; color:${extraTot >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:700;">${extraTot > 0 ? '+' : ''}${Math.round(extraTot*10)/10}</td>
+              <td style="text-align:center;">${fmtHM(oreContTot)}</td>
+              <td style="text-align:center;">${fmtHM(oreEffTot)}</td>
+              <td style="text-align:center; color:${extraTot >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:700;">${fmtHM(extraTot, true)}</td>
               <td colspan="2" style="color:var(--gray-500);">Ferie: ${ferieMese} | Malattie: ${malMese}</td>
             </tr>
           </tfoot>
@@ -2060,7 +2072,7 @@
         pendingHtml.innerHTML = pending.map((r, i) => `
           <div class="pending-entry">
             <strong>${r.date} (${r.dayOfWeek})</strong><br/>
-            <span style="font-size: 12px;">${r.type === 'ore' ? r.hours + ' ore (contratto ' + r.contractHours + ')' : r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro'}</span>
+            <span style="font-size: 12px;">${r.type === 'ore' ? fmtHM(r.hours) + ' (contratto ' + fmtHM(r.contractHours) + ')' : r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro'}</span>
             ${r.type === 'ore' && timeRange(r) ? `<div style="font-size: 13px; margin-top: 4px; font-weight: 600; color: var(--brand);">${timeRange(r)}</div>` : ''}
             ${r.notes ? `<div style="font-size: 11px; margin-top: 4px; color: #52514e;">📝 ${r.notes}</div>` : ''}
             <div class="button-group" style="margin-top: 8px;">
@@ -2078,7 +2090,7 @@
         historyHtml.innerHTML = approved.slice().sort((a, b) => b.date.localeCompare(a.date)).map(r => `
           <div style="padding: 8px 0; border-bottom: 1px solid #e1e0d9; display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
             <div>
-              <strong>${r.date} (${r.dayOfWeek})</strong> ${r.type === 'ore' ? '— ' + r.hours + ' ore' + (timeRange(r) ? ' · ' + timeRange(r) : '') : '— ' + (r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro')}<br/>
+              <strong>${r.date} (${r.dayOfWeek})</strong> ${r.type === 'ore' ? '— ' + fmtHM(r.hours) + (timeRange(r) ? ' · ' + timeRange(r) : '') : '— ' + (r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro')}<br/>
               <span style="font-size: 11px; color: #52514e;">inviata il ${r.submittedAt || '—'}</span>
             </div>
             <span class="badge badge-green" style="white-space:nowrap;">✓ ${r.handledBy || '—'}</span>
