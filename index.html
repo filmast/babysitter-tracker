@@ -226,6 +226,18 @@
     .ec-table .ec-neg { color: var(--red); }
     .ec-table td { white-space: nowrap; }
     .ec-table .ec-dates { font-size: 12px; min-width: 150px; white-space: normal; }
+    .st-row { display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--gray-100); }
+    .st-row:last-child { border-bottom: 0; }
+    .st-date { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--brand-light); color: var(--brand-dark); border-radius: 8px; padding: 6px 0; line-height: 1.15; }
+    .st-date span { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+    .st-date strong { font-size: 15px; }
+    .st-main { font-size: 14px; font-weight: 600; color: var(--gray-900); }
+    .st-sub { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+    .st-diff { font-size: 12px; font-weight: 600; margin-left: 6px; padding: 1px 7px; border-radius: 99px; }
+    .st-diff.pos { background: var(--green-light); color: #15803D; }
+    .st-diff.neg { background: var(--red-light); color: #B91C1C; }
+    .st-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .st-sent { font-size: 11px; color: var(--gray-500); white-space: nowrap; }
     .kpi-sub { font-size: 12px; color: var(--gray-500); margin-top: 4px; }
     .progress-bar { background: var(--gray-200); border-radius: 99px; height: 6px; margin-top: 8px; overflow: hidden; }
     .progress-fill { background: linear-gradient(90deg, var(--brand), #8B5CF6); height: 100%; border-radius: 99px; transition: width 0.6s ease; }
@@ -788,6 +800,20 @@
       const body = tot === 0 ? '0 min' : H && M ? `${H} h ${M} min` : H ? `${H} h` : `${M} min`;
       const sign = tot === 0 ? '' : (h < 0 ? '−' : (signed ? '+' : ''));
       return sign + body;
+    }
+
+    // Data di invio leggibile (gg/mm). Il foglio, impostato in formato USA, ha trasformato
+    // alcuni testi "gg/mm/aaaa" in date mese/giorno: rileggendole come MM/gg si recupera il testo originale.
+    function fmtSubmitted(v) {
+      if (!v) return '—';
+      const t = String(v).trim();
+      const m = t.match(/^(\d{2})\/(\d{2})\/\d{4}$/);
+      if (m) return `${m[1]}/${m[2]}`;
+      const d = new Date(t);
+      if (isNaN(d)) return t;
+      const p = new Intl.DateTimeFormat('it-IT', { month: '2-digit', day: '2-digit', timeZone: 'Europe/Rome' }).formatToParts(d);
+      const g = p.find(x => x.type === 'day').value, mm = p.find(x => x.type === 'month').value;
+      return `${mm}/${g}`;
     }
 
     function timeRange(r) {
@@ -2087,15 +2113,30 @@
       if (approved.length === 0) {
         historyHtml.innerHTML = '<p class="muted">Nessun dato.</p>';
       } else {
-        historyHtml.innerHTML = approved.slice().sort((a, b) => b.date.localeCompare(a.date)).map(r => `
-          <div style="padding: 8px 0; border-bottom: 1px solid #e1e0d9; display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
-            <div>
-              <strong>${r.date} (${r.dayOfWeek})</strong> ${r.type === 'ore' ? '— ' + fmtHM(r.hours) + (timeRange(r) ? ' · ' + timeRange(r) : '') : '— ' + (r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro')}<br/>
-              <span style="font-size: 11px; color: #52514e;">inviata il ${r.submittedAt || '—'}</span>
+        const giorni = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+        historyHtml.innerHTML = approved.slice().sort((a, b) => b.date.localeCompare(a.date)).map(r => {
+          const d = new Date(r.date + 'T00:00:00');
+          const tipo = r.type === 'ore' ? 'Servizio' : r.type === 'ferie' ? 'Ferie' : r.type === 'malattia' ? 'Malattia' : 'Altro';
+          const diff = r.type === 'ore' ? (r.hours || 0) - (r.contractHours || 0) : 0;
+          const diffTxt = r.type === 'ore' && Math.abs(diff) > 0.001
+            ? `<span class="st-diff ${diff > 0 ? 'pos' : 'neg'}">${fmtHM(diff, true)}</span>` : '';
+          const main = r.type === 'ore' ? `${fmtHM(r.hours)} ${diffTxt}` : tipo;
+          const sub = r.type === 'ore'
+            ? [r.startTime && r.endTime ? `${r.startTime}–${r.endTime}` : '', `contratto ${fmtHM(r.contractHours)}`].filter(Boolean).join(' · ')
+            : (r.notes || '');
+          return `
+          <div class="st-row">
+            <div class="st-date"><span>${giorni[d.getDay()]}</span><strong>${r.date.slice(8, 10)}/${r.date.slice(5, 7)}</strong></div>
+            <div class="st-body">
+              <div class="st-main">${main}</div>
+              ${sub ? `<div class="st-sub">${sub}</div>` : ''}
             </div>
-            <span class="badge badge-green" style="white-space:nowrap;">✓ ${r.handledBy || '—'}</span>
-          </div>
-        `).join('');
+            <div class="st-meta">
+              <span class="badge badge-green">✓ ${r.handledBy || '—'}</span>
+              <span class="st-sent">inviata il ${fmtSubmitted(r.submittedAt)}</span>
+            </div>
+          </div>`;
+        }).join('');
       }
 
       // Rileva e mostra doppioni
@@ -2134,7 +2175,7 @@
           <div style="margin-top: 8px;">
             ${records.map(r => `
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #fce0e0;">
-                <span style="font-size: 13px;">${r.hours} ore — inviato il ${r.submittedAt || 'N/A'}</span>
+                <span style="font-size: 13px;">${fmtHM(r.hours)} — inviato il ${fmtSubmitted(r.submittedAt)}</span>
                 <button class="btn btn-danger" style="font-size: 11px; padding: 4px 10px; background:#e34948; color:white; border:none; border-radius:4px; cursor:pointer;"
                   onclick="deleteDoppione(${r.globalIdx})">🗑 Elimina</button>
               </div>
